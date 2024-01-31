@@ -1,4 +1,3 @@
-import childProcess from 'child_process';
 export declare const enum LaunchErrorCodes {
     ERR_LAUNCHER_PATH_NOT_SET = "ERR_LAUNCHER_PATH_NOT_SET",
     ERR_LAUNCHER_INVALID_USER_DATA_DIRECTORY = "ERR_LAUNCHER_INVALID_USER_DATA_DIRECTORY",
@@ -33,4 +32,3 @@ export declare function makeTmpDir(): string;
 export declare function toWin32Path(dir?: string): string;
 export declare function toWSLPath(dir: string, fallback: string): string;
 export declare function getWSLLocalAppDataPath(path: string): string;
-export { childProcess as _childProcessForTesting };
