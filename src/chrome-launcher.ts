@@ -8,9 +8,9 @@
 import * as childProcess from "child_process";
 import * as fs from "fs";
 import * as net from "net";
-import * as chromeFinder from "./chrome-finder.js";
-import { getRandomPort } from "./random-port.js";
-import { DEFAULT_FLAGS } from "./flags.js";
+import * as chromeFinder from "./chrome-finder";
+import { getRandomPort } from "./random-port";
+import { DEFAULT_FLAGS } from "./flags";
 import {
   makeTmpDir,
   defaults,
@@ -20,11 +20,10 @@ import {
   InvalidUserDataDirectoryError,
   UnsupportedPlatformError,
   ChromeNotInstalledError,
-} from "./utils.js";
+} from "./utils";
 import { ChildProcess } from "child_process";
 import { spawn } from "child_process";
-import log from "lighthouse-logger";
-
+const log = require("lighthouse-logger");
 const isWsl = getPlatform() === "wsl";
 const isWindows = getPlatform() === "win32";
 const _SIGINT = "SIGINT";

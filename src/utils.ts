@@ -6,9 +6,9 @@
 'use strict';
 
 import {join} from 'path';
-import childProcess from 'child_process';
+import {execSync, execFileSync} from 'child_process';
 import {mkdirSync} from 'fs';
-import isWsl from 'is-wsl';
+import isWsl = require('is-wsl');
 
 export const enum LaunchErrorCodes {
   ERR_LAUNCHER_PATH_NOT_SET = 'ERR_LAUNCHER_PATH_NOT_SET',
@@ -91,7 +91,7 @@ export function toWin32Path(dir: string = ''): string {
   }
 
   try {
-    return childProcess.execFileSync('wslpath', ['-w', dir]).toString().trim();
+    return execFileSync('wslpath', ['-w', dir]).toString().trim();
   } catch {
     return toWinDirFormat(dir);
   }
@@ -99,7 +99,7 @@ export function toWin32Path(dir: string = ''): string {
 
 export function toWSLPath(dir: string, fallback: string): string {
   try {
-    return childProcess.execFileSync('wslpath', ['-u', dir]).toString().trim();
+    return execFileSync('wslpath', ['-u', dir]).toString().trim();
   } catch {
     return fallback;
   }
@@ -121,7 +121,7 @@ export function getWSLLocalAppDataPath(path: string): string {
 }
 
 function makeUnixTmpDir() {
-  return childProcess.execSync('mktemp -d -t lighthouse.XXXXXXX').toString().trim();
+  return execSync('mktemp -d -t lighthouse.XXXXXXX').toString().trim();
 }
 
 function makeWin32TmpDir() {
@@ -133,5 +133,3 @@ function makeWin32TmpDir() {
   mkdirSync(tmpdir, {recursive: true});
   return tmpdir;
 }
-
-export {childProcess as _childProcessForTesting};

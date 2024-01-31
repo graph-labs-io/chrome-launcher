@@ -6,11 +6,10 @@
 
 'use strict';
 
-import {launch} from '../src/index.js';
+import {launch} from '../src/';
 import * as assert from 'assert';
 
-import log from 'lighthouse-logger';
-
+const log = require('lighthouse-logger');
 describe('Launcher', () => {
 
   beforeEach(() => {

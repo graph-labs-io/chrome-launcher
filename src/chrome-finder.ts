@@ -5,14 +5,14 @@
  */
 'use strict';
 
-import fs from 'fs';
-import path from 'path';
+import fs = require('fs');
+import path = require('path');
 import {homedir} from 'os';
 import {execSync, execFileSync} from 'child_process';
-import escapeRegExp from 'escape-string-regexp';
-import log from 'lighthouse-logger';
+import escapeRegExp = require('escape-string-regexp');
+const log = require('lighthouse-logger');
 
-import {getWSLLocalAppDataPath, toWSLPath, ChromePathNotSetError} from './utils.js';
+import {getWSLLocalAppDataPath, toWSLPath, ChromePathNotSetError} from './utils';
 
 const newLineRegex = /\r?\n/;
 

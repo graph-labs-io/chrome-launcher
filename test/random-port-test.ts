@@ -16,7 +16,7 @@
 'use strict';
 
 import * as assert from 'assert';
-import {getRandomPort} from '../src/random-port.js';
+import {getRandomPort} from '../src/random-port';
 
 describe('Random port generation', () => {
   it('generates a valid random port number', async () => {
