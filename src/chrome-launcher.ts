@@ -22,7 +22,7 @@ import {
   ChromeNotInstalledError,
 } from "./utils.js";
 import { ChildProcess } from "child_process";
-import { spawn, spawnSync } from "child_process";
+import { spawn } from "child_process";
 import log from "lighthouse-logger";
 
 const isWsl = getPlatform() === "wsl";
@@ -469,7 +469,7 @@ class Launcher {
               // taskkill can fail to kill the process e.g. due to missing permissions.
               // Let's kill the process via Node API. This delays killing of all child
               // proccesses of `this.proc` until the main Node.js process dies.
-              this.chromeProcess.kill();
+              this.chromeProcess?.kill();
             }
           }
         );
