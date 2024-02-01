@@ -461,17 +461,7 @@ class Launcher {
     );
     try {
       if (isWindows) {
-        childProcess.exec(
-          `taskkill /pid ${this.chromeProcess.pid} /T /F`,
-          (error: Error | null) => {
-            if (error) {
-              // taskkill can fail to kill the process e.g. due to missing permissions.
-              // Let's kill the process via Node API. This delays killing of all child
-              // proccesses of `this.proc` until the main Node.js process dies.
-              this.chromeProcess?.kill();
-            }
-          }
-        );
+        this.chromeProcess?.kill("SIGKILL");
       } else {
         if (this.chromeProcess.pid) {
           process.kill(-this.chromeProcess.pid, "SIGKILL");
