@@ -5,30 +5,34 @@
  */
 'use strict';
 
-import {Launcher, launch, killAll, Options, getChromePath} from '../src/chrome-launcher';
-import {DEFAULT_FLAGS} from '../src/flags';
+import { Launcher, launch, killAll, Options, getChromePath } from '../src/chrome-launcher';
+import { DEFAULT_FLAGS } from '../src/flags';
 
-import {spy, stub} from 'sinon';
+import { spy, stub } from 'sinon';
 import * as assert from 'assert';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
+import * as fse from 'fs-extra';
 
 const log = require('lighthouse-logger');
 const fsMock = {
-  openSync: () => {},
-  closeSync: () => {},
-  writeFileSync: () => {},
-  rmdirSync: () => {},
-  rmSync: () => {},
+  open: () => { },
+  close: () => { },
+  writeFile: () => { },
+  rm: () => { },
+};
+
+const fseMock = {
+  pathExists: () => { },
 };
 
 const launchChromeWithOpts = async (opts: Options = {}) => {
-  const spawnStub = stub().returns({pid: 'some_pid'});
+  const spawnStub = stub().returns({ pid: 'some_pid' });
 
   const chromeInstance =
-      new Launcher(opts, {fs: fsMock as any, spawn: spawnStub as any});
+    new Launcher(opts, { fs: fsMock as any, fse: fseMock as any, spawn: spawnStub as any });
   stub(chromeInstance, 'waitUntilReady').returns(Promise.resolve());
 
-  chromeInstance.prepare();
+  await chromeInstance.prepare();
 
   try {
     await chromeInstance.launch();
@@ -48,7 +52,7 @@ describe('Launcher', () => {
   });
 
   it('sets default launching flags', async () => {
-    const spawnStub = await launchChromeWithOpts({userDataDir: 'some_path'});
+    const spawnStub = await launchChromeWithOpts({ userDataDir: 'some_path' });
     const chromeFlags = spawnStub.getCall(0).args[1] as string[];
     assert.ok(chromeFlags.find(f => f.startsWith('--remote-debugging-port')))
     assert.ok(chromeFlags.find(f => f.startsWith('--disable-background-networking')))
@@ -56,15 +60,14 @@ describe('Launcher', () => {
   });
 
   it('accepts and uses a custom path', async () => {
-    const fs = {...fsMock, rmdirSync: spy(), rmSync: spy()};
+    const fs = { ...fsMock, rm: spy() };
     const chromeInstance =
-        new Launcher({userDataDir: 'some_path'}, {fs: fs as any});
+      new Launcher({ userDataDir: 'some_path' }, { fs: fs as any });
 
-    chromeInstance.prepare();
+    await chromeInstance.prepare();
 
-    chromeInstance.destroyTmp();
-    assert.strictEqual(fs.rmdirSync.callCount, 0);
-    assert.strictEqual(fs.rmSync.callCount, 0);
+    await chromeInstance.destroyTmp();
+    assert.strictEqual(fs.rm.callCount, 0);
   });
 
   it('allows to overwrite browser prefs', async () => {
@@ -72,12 +75,13 @@ describe('Launcher', () => {
     const readFileStub = stub().returns(JSON.stringify({ some: 'prefs' }))
     const writeFileStub = stub()
     const mkdirStub = stub()
-    const fs = {...fsMock, rmdir: spy(), readFileSync: readFileStub, writeFileSync: writeFileStub, existsSync: existStub, mkdirSync: mkdirStub };
+    const fs = { ...fsMock, readFile: readFileStub, writeFile: writeFileStub, mkdir: mkdirStub };
+    const fse = { ...fseMock, pathExists: existStub }
     const chromeInstance =
-        new Launcher({prefs: {'download.default_directory': '/some/dir'}}, {fs: fs as any});
+      new Launcher({ prefs: { 'download.default_directory': '/some/dir' } }, { fs: fs as any, fse: fse as any });
 
-    chromeInstance.prepare();
-    assert.equal(
+    await chromeInstance.prepare();
+    assert.strictEqual(
       writeFileStub.getCall(0).args[1],
       '{"some":"prefs","download.default_directory":"/some/dir"}'
     )
@@ -88,60 +92,62 @@ describe('Launcher', () => {
     const readFileStub = stub().returns(Buffer.from(JSON.stringify({ some: 'prefs' })))
     const writeFileStub = stub()
     const mkdirStub = stub()
-    const fs = {...fsMock, rmdir: spy(), readFileSync: readFileStub, writeFileSync: writeFileStub, existsSync: existStub, mkdirSync: mkdirStub };
+    const fs = { ...fsMock, readFile: readFileStub, writeFile: writeFileStub, mkdir: mkdirStub };
+    const fse = { ...fseMock, pathExists: existStub }
     const chromeInstance =
-        new Launcher({prefs: {'download.default_directory': '/some/dir'}}, {fs: fs as any});
+      new Launcher({ prefs: { 'download.default_directory': '/some/dir' } }, { fs: fs as any, fse: fse as any });
 
-    chromeInstance.prepare();
-    assert.equal(readFileStub.getCalls().length, 0)
-    assert.equal(
+    await chromeInstance.prepare();
+    assert.strictEqual(readFileStub.getCalls().length, 0)
+    assert.strictEqual(
       writeFileStub.getCall(0).args[1],
       '{"download.default_directory":"/some/dir"}'
     )
   });
 
   it('cleans up the tmp dir after closing (mocked)', async () => {
-    const rmMock = stub().callsFake((_path, _options) => {});
-    const fs = {...fsMock, rmdirSync: rmMock, rmSync: rmMock};
+    const rmMock = stub().callsFake((_path, _options) => { });
+    const fs = { ...fsMock, rm: rmMock };
 
-    const chromeInstance = new Launcher({}, {fs: fs as any});
+    const chromeInstance = new Launcher({}, { fs: fs as any });
 
-    chromeInstance.prepare();
-    chromeInstance.destroyTmp();
+    await chromeInstance.prepare();
+    await chromeInstance.destroyTmp();
     assert.strictEqual(rmMock.callCount, 1);
   });
 
-
   it('cleans up the tmp dir after closing (real)', async () => {
-    const rmSpy = spy(fs, 'rmSync' in fs ? 'rmSync' : 'rmdirSync');
-    const fsFake = {...fsMock, rmdirSync: rmSpy, rmSync: rmSpy};
+    const rmSpy = spy(fs, 'rm');
+    const pathExistsSpy = spy(fse, 'pathExists');
+    const fsFake = { ...fsMock, rm: rmSpy };
+    const fseFake = { ...fseMock, pathExists: pathExistsSpy };
 
-    const chromeInstance = new Launcher({}, {fs: fsFake as any});
+    const chromeInstance = new Launcher({}, { fs: fsFake as any, fse: fseFake as any });
 
     await chromeInstance.launch();
     assert.ok(chromeInstance.userDataDir);
-    assert.ok(fs.existsSync(chromeInstance.userDataDir));
+    assert.ok(await fse.pathExists(chromeInstance.userDataDir));
 
-    chromeInstance.kill();
+    await chromeInstance.kill();
 
     // tmpdir is gone 
-    const [path] = fsFake.rmSync.getCall(0).args;
+    const [path] = fsFake.rm.getCall(0).args;
     assert.strictEqual(chromeInstance.userDataDir, path);
-    assert.equal(fs.existsSync(path), false, `userdatadir still exists: ${path}`);
+    assert.strictEqual(await fse.pathExists(path as string), false, `userdatadir still exists: ${path}`);
   }).timeout(30 * 1000);
 
-  it('does not delete created directory when custom path passed', () => {
-    const chromeInstance = new Launcher({userDataDir: 'some_path'}, {fs: fsMock as any});
+  it('does not delete created directory when custom path passed', async () => {
+    const chromeInstance = new Launcher({ userDataDir: 'some_path' }, { fs: fsMock as any });
 
-    chromeInstance.prepare();
+    await chromeInstance.prepare();
     assert.strictEqual(chromeInstance.userDataDir, 'some_path');
   });
 
-  it('defaults to genering a tmp dir when no data dir is passed', () => {
-    const chromeInstance = new Launcher({}, {fs: fsMock as any});
+  it('defaults to genering a tmp dir when no data dir is passed', async () => {
+    const chromeInstance = new Launcher({}, { fs: fsMock as any });
     const originalMakeTmp = chromeInstance.makeTmpDir;
     chromeInstance.makeTmpDir = () => 'tmp_dir'
-    chromeInstance.prepare()
+    await chromeInstance.prepare()
     assert.strictEqual(chromeInstance.userDataDir, 'tmp_dir');
 
     // Restore the original fn.
@@ -151,14 +157,14 @@ describe('Launcher', () => {
   it('doesn\'t fail when killed twice', async () => {
     const chromeInstance = new Launcher();
     await chromeInstance.launch();
-    chromeInstance.kill();
-    chromeInstance.kill();
+    await chromeInstance.kill();
+    await chromeInstance.kill();
   }).timeout(30 * 1000);
 
   it('doesn\'t fail when killing all instances', async () => {
     await launch();
     await launch();
-    const errors = killAll();
+    const errors = await killAll();
     assert.strictEqual(errors.length, 0);
   });
 
@@ -168,7 +174,7 @@ describe('Launcher', () => {
     let pid = chromeInstance.pid!;
     await chromeInstance.launch();
     assert.strictEqual(pid, chromeInstance.pid);
-    chromeInstance.kill();
+    await chromeInstance.kill();
   });
 
   it('gets all default flags', async () => {
@@ -192,7 +198,7 @@ describe('Launcher', () => {
   });
 
   it('removes all default flags', async () => {
-    const spawnStub = await launchChromeWithOpts({ignoreDefaultFlags: true});
+    const spawnStub = await launchChromeWithOpts({ ignoreDefaultFlags: true });
     const chromeFlags = spawnStub.getCall(0).args[1] as string[];
     assert.ok(!chromeFlags.includes('--disable-extensions'));
   });
@@ -211,14 +217,14 @@ describe('Launcher', () => {
 
   it('passes no env vars when none are passed', async () => {
     const spawnStub = await launchChromeWithOpts();
-    const spawnOptions = spawnStub.getCall(0).args[2] as {env: {}};
+    const spawnOptions = spawnStub.getCall(0).args[2] as { env: {} };
     assert.deepStrictEqual(spawnOptions.env, Object.assign({}, process.env));
   });
 
   it('passes env vars when passed', async () => {
-    const envVars = {'hello': 'world'};
-    const spawnStub = await launchChromeWithOpts({envVars});
-    const spawnOptions = spawnStub.getCall(0).args[2] as {env: {}};
+    const envVars = { 'hello': 'world' };
+    const spawnStub = await launchChromeWithOpts({ envVars });
+    const spawnOptions = spawnStub.getCall(0).args[2] as { env: {} };
     assert.deepStrictEqual(spawnOptions.env, envVars);
   });
 
@@ -237,7 +243,7 @@ describe('Launcher', () => {
   });
 
   it('throws an error when chromePath is empty', (done) => {
-    const chromeInstance = new Launcher({chromePath: ''});
+    const chromeInstance = new Launcher({ chromePath: '' });
     chromeInstance.launch().catch(() => done());
   });
 

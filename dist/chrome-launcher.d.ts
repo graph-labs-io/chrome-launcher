@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import * as childProcess from "child_process";
-import * as fs from "fs";
+import * as fs from "fs/promises";
+import * as fse from "fs-extra";
 import { ChildProcess } from "child_process";
 declare type JSONLike = {
     [property: string]: JSONLike;
@@ -31,11 +32,12 @@ export interface LaunchedChrome {
 export interface ModuleOverrides {
     fs?: typeof fs;
     spawn?: typeof childProcess.spawn;
+    fse?: typeof fse;
 }
 declare function launch(opts?: Options): Promise<LaunchedChrome>;
 /** Returns Chrome installation path that chrome-launcher will launch by default. */
 declare function getChromePath(): string;
-declare function killAll(): Array<Error>;
+declare function killAll(): Promise<Array<Error>>;
 declare class Launcher {
     private opts;
     private tmpDirandPidFileReady;
@@ -52,6 +54,7 @@ declare class Launcher {
     private connectionPollInterval;
     private maxConnectionRetries;
     private fs;
+    private fse;
     private spawn;
     private useDefaultProfile;
     private envVars;
@@ -67,15 +70,15 @@ declare class Launcher {
     /** Returns all available chrome installations in decreasing priority order. */
     static getInstallations(): string[];
     makeTmpDir(): string;
-    prepare(): void;
+    prepare(): Promise<void>;
     private setBrowserPrefs;
     launch(): Promise<void>;
     private spawnProcess;
     private cleanup;
     private isDebuggerReady;
     waitUntilReady(): Promise<void>;
-    kill(): void;
-    destroyTmp(): void;
+    kill(): Promise<void>;
+    destroyTmp(): Promise<void>;
 }
 export default Launcher;
 export { Launcher, launch, killAll, getChromePath };

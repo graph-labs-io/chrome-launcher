@@ -18,6 +18,7 @@
     "print-chrome-path": "bin/print-chrome-path.js"
   },
   "devDependencies": {
+    "@types/fs-extra": "9.0.7",
     "@types/mocha": "^8.0.4",
     "@types/sinon": "^9.0.1",
     "clang-format": "^1.0.50",
@@ -29,10 +30,11 @@
   "dependencies": {
     "@types/node": "*",
     "escape-string-regexp": "^4.0.0",
+    "fs-extra": "^11.2.0",
     "is-wsl": "^2.2.0",
     "lighthouse-logger": "^1.4.1"
   },
-  "version": "0.15.4",
+  "version": "0.16.0",
   "types": "./dist/index.d.ts",
   "description": "Launch latest Chrome with the Devtools Protocol port open",
   "repository": "https://github.com/GoogleChrome/chrome-launcher/",
